@@ -216,10 +216,10 @@ function identifier($document, $position)
 {
 	$start = $end = offset($document, $position);
 
-	while ($start > 0 && preg_match('/[\w:]/u', $document[$start - 1]))
+	while ($start > 0 && (IntlChar::chr($document[$start - 1]) === null || preg_match('/[\w:]/u', $document[$start - 1])))
 		$start--;
 
-	while ($end < strlen($document) && preg_match('/[\w:]/u', $document[$end]))
+	while ($end < strlen($document) && (IntlChar::chr($document[$end]) === null || preg_match('/[\w:]/u', $document[$end])))
 		$end++;
 
 	return substr($document, $start, $end - $start);
