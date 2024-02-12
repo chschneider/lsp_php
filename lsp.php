@@ -91,7 +91,7 @@ while (!feof(STDIN))
 				],
 			],
 		};
-		
+
 		$response = @json_encode([
 			'id'     => $req->id,
 			'result' => $result,
@@ -173,7 +173,7 @@ function symbols($document)
 	$result = array_values(array_filter(array_map(function($token) use (&$functiondef, &$line, &$col, $symbols) {
 		if ($line != intval($token[2]) - 1)
 			[$line, $col] = [intval($token[2]) - 1, 0];
-			
+
 		switch ($token[0])
 		{
 			case T_WHITESPACE: case T_DOC_COMMENT: case T_COMMENT:
@@ -200,7 +200,7 @@ function symbols($document)
 					];
 				}
 
-			default: 
+			default:
 				$functiondef = false;
 				break;
 		}
@@ -254,7 +254,7 @@ function symbol($document, $req)
 		}
 
 		$doccomment = $funcref->getDocComment();
-		$contents = trim('***' . 
+		$contents = trim('***' .
 			($funcref->isStatic ? 'static ' : '') .
 			# 'function ' .
 			"$identifier(" .
