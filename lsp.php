@@ -129,7 +129,7 @@ while (!feof(STDIN))
 						# PHP Parse error:  syntax error, unexpected token "%", expecting end of file in Standard input code on line 3
 						# t.php:28 $d used only once: $d = 42;
 						if (preg_match('/^[^:]+:\s+(?<message>.*) in Standard input code on line (?<line>\d+)/', $line, $checkmatches) ||
-						    preg_match('/^\S+:(?<line>\d+):\d+\s+(?<message>.*)/', $line, $checkmatches))
+						    preg_match('/^\S+:(?<line>\d+):\d+:?\s+(?<message>.*)/', $line, $checkmatches))
 						{
 							['line' => $checkline, 'message' => $checkmessage] = $checkmatches;
 							$diagnostics[] = [
