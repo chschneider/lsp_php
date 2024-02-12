@@ -134,7 +134,7 @@ while (!feof(STDIN))
 							['line' => $checkline, 'message' => $checkmessage] = $checkmatches;
 							$diagnostics[] = [
 								'range'   => ['start' => ['line' => $checkline - 1, 'character' => 0], 'end' => ['line' => $checkline - 1, 'character' => 0]],
-								# 'severity' => $severity,
+								'severity' => it::match('error', $checkmessage) ? 1 : 2,	# 1=Error, 2=Warning
 								'message' => $checkmessage,
 							];
 						}
