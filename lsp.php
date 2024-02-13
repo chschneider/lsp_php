@@ -1,7 +1,7 @@
 #!/usr/bin/env php
 <?php
 
-$opts = getopt("c:fhi:l::", ['check-cmds:', 'full-sync', 'help', 'include-path:', 'log::']);
+$opts = getopt("c:Cfhi:l::", ['check-cmds:', 'check-only', 'full-sync', 'help', 'include-path:', 'log::']);
 
 if (isset($opts['h']) || isset($opts['help']))
 {
@@ -9,6 +9,7 @@ if (isset($opts['h']) || isset($opts['help']))
 Usage: $argv[0] [OPTIONS]
 Options:
   -c=CMDS, --check-cmds=CMDS    Run these syntax check / lint commands on code
+  -C,       --check-only        Only run check-cmds, no other functionality
   -f,      --full-sync          Use full instead of incremental sync
   -h,      --help               Show usage
   -i=PATH, --include-path=PATH  Prepend this path to the include path
@@ -18,10 +19,11 @@ USAGE);
 	exit(1);
 }
 
-if ($include_path = $opts['i'] ?? $opts['include-path'])
+if ($include_path = $opts['i'] ?? $opts['include-path'] ?? false)
 	ini_set('include_path', "$include_path:" . ini_get('include_path'));
 
 $checkcmds = $opts['c'] ?? $opts['check-cmds'] ?? 'php -nl;phplint.php -f';
+$allfeatures = $opts['C'] ?? $opts['check-only'] ?? true;
 
 $log = fopen(($logfile = $opts['l'] ?? $opts['log'] ?? '/dev/null') ? $logfile : (getenv('HOME') . '/.cache/helix/lsp_php.log'), 'a');
 $state = 'new';
@@ -62,9 +64,9 @@ while (!feof(STDIN))
 					'capabilities' => [
 						'positionEncoding'       => 'utf-8',
 						'textDocumentSync'       => (isset($opts['f']) || isset($opts['full-sync'])) ? 1 : 2,  # 1=Full, 2=Incremental
-						'implementationProvider' => true,
-						'documentSymbolProvider' => true,
-						'hoverProvider'          => true,
+						'implementationProvider' => $allfeatures,
+						'documentSymbolProvider' => $allfeatures,
+						'hoverProvider'          => $allfeatures,
 					],
 				],
 			],
