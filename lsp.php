@@ -239,7 +239,7 @@ function symbol($document, $req)
 	try { $reflection = new ReflectionMethod($identifier);   } catch (Exception) {}
 	try { $reflection = new ReflectionFunction($identifier); } catch (Exception) {}
 
-	if (!($symbol = documentation($reflection)))
+	if (!($symbol = documentation($reflection))['contents'])
 	{
 		$uri = $req->params->textDocument->uri;
 		$range =  array_values(array_filter(symbols($document), fn($v) => $name === $v['name']))[0]['range'];
