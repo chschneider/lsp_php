@@ -28,8 +28,11 @@ Options:
 ```
 
 ## Features
-Currently is supports the following language features with `helix keymap command to view it`
-* textDocument/documentSymbol: List of functions/methods defined in current document `Space + s`
-* textDocument/hover: Show function definition, i.e. parameters, return type and doccomment `Space + k`
-* textDocument/implementation: Goto function implementation `gi`
-* textDocument/publishDiagnostics: Run syntax check/lint on text changes and display errors/warnings `Space + d`
+Currently is supports the following language features:
+| Command                         | Description                                                           | helix keymap        |
+|:--------------------------------|:----------------------------------------------------------------------|:--------------------|
+| textDocument/documentSymbol     | List of functions/methods defined in current document                 | `Space + s`         |
+| textDocument/hover              | Show function definition, i.e. parameters, return type and doccomment | `Space + k`         |
+| textDocument/implementation     | Goto function implementation                                          | `gi`                |
+| textDocument/publishDiagnostics | Run syntax check/lint on text changes and display errors/warnings     | `Space + d`         |
+| textDocument/completion         | Show completion for PHP builtin functions or static method in classes | `ctrl-x` or `foo::` |
