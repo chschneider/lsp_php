@@ -30,8 +30,21 @@ $documents = [];
 
 while (!feof(STDIN))
 {
-	$line = fgets(STDIN, $len);
-	fputs($log, "$state($len): $line");
+	$line = null;
+	do {
+		$read = [STDIN];
+		$write = $except = null;
+		if (stream_select($read, $write, $except, 0, 500_000))
+		{
+			$line = fgets(STDIN, $len);
+			fputs($log, "$state($len): $line");
+		}
+		else
+		{
+			# fputs($log, "$state: timeout\n");
+			check(null, null, null);
+		}
+	} while(!feof(STDIN) && !$line);
 
 	[$state, $len, $req] = match($state) {
 		'new'  => ['nl',   preg_match('/Content-Length: (\d+)/', $line, $m) ? ($m[1] + 1) : null, null],
@@ -108,54 +121,8 @@ while (!feof(STDIN))
 		#   fputs($log, "\n\nDOC '$document'\n\n");
 
 		# Run syntax checkers and lints on changed/opened documents
-		if ($req->method == 'textDocument/didChange' || $req->method == 'textDocument/didOpen')
-		{
-			$diagnostics = [];
-
-			foreach (explode(';', $checkcmds) as $checkcmd)
-			{
-				$pipes = [];
-				if ($check = proc_open($checkcmd, [['pipe', 'r'], ['pipe', 'w'], ['pipe', 'w']], $pipes))
-				{
-					fputs($pipes[0], $documents[$req->params->textDocument->uri]);
-					fclose($pipes[0]);
-
-					$checkoutput = stream_get_contents($pipes[1]);
-					fclose($pipes[1]);
-					fclose($pipes[2]);
-
-					foreach (explode("\n", $checkoutput) as $line)
-					{
-						# PHP Parse error:  syntax error, unexpected token "%", expecting end of file in Standard input code on line 3
-						# t.php:28 $d used only once: $d = 42;
-						if (preg_match('/^[^:]+:\s+(?<message>.*) in Standard input code on line (?<line>\d+)/', $line, $checkmatches) ||
-						    preg_match('/^\S+:(?<line>\d+):\d+:?\s+(?<message>.*)/', $line, $checkmatches))
-						{
-							['line' => $checkline, 'message' => $checkmessage] = $checkmatches;
-							$diagnostics[] = [
-								'range'   => ['start' => ['line' => $checkline - 1, 'character' => 0], 'end' => ['line' => $checkline - 1, 'character' => 0]],
-								'severity' => preg_match('/error/', $checkmessage) ? 1 : 2,	# 1=Error, 2=Warning
-								'message' => $checkmessage,
-							];
-						}
-					}
-
-					proc_close($check);
-				}
-			}
-
-			$response = json_encode([
-				'method' => 'textDocument/publishDiagnostics',
-				'params' => [
-					'uri'    => $req->params->textDocument->uri,
-					'diagnostics' => $diagnostics,
-				],
-			]);
-
-			fputs(STDOUT, "Content-Length: " . strlen($response) . "\r\n\r\n" . $response);
-			# if ($diagnostics)
-			# 	fputs($log, "Content-Length: " . strlen($response) . "\r\n\r\n" . $response);
-		}
+		if ($req->method == 'textDocument/didOpen' || $req->method == 'textDocument/didChange')
+			check($documents, $req->params->textDocument->uri, $checkcmds);
 
 		if ($req->method == 'exit')
 			exit(0);
@@ -282,4 +249,93 @@ function symbol($document, $req)
 		'range' => $range,
 		'contents' => $contents,
 	];
+}
+
+function check($documents, $uri, $checkcmds)
+{
+	static $child;
+	static $sockets = null;
+	static $queued;
+
+	$sockets ??= stream_socket_pair(STREAM_PF_UNIX, STREAM_SOCK_STREAM, STREAM_IPPROTO_IP);
+
+	if ($child)
+	{
+		# Main process
+		if ($sockets[0])
+		{
+			fclose($sockets[0]);
+			unset($sockets[0]);
+		}
+
+		if (pcntl_waitpid($child, $dummy_status, WNOHANG))
+		{
+			$response = fgets($sockets[1]);
+			fclose($sockets[1]);
+			$child = $sockets = null;
+
+			if ($response)
+				fputs(STDOUT, "Content-Length: " . strlen($response) . "\r\n\r\n" . $response);
+
+			if ($queued)
+			{
+				check(...$queued);	# Start last check which queued up while other check was running
+				$queued = null;
+			}
+
+		}
+		else if ($checkcmds)
+			$queued = [$documents, $uri, $checkcmds];
+	}
+	else if ($checkcmds && !($child = pcntl_fork()))
+	{
+		# Child process running check cmds
+		fclose($sockets[1]);
+		$diagnostics = [];
+
+		foreach (explode(';', $checkcmds) as $checkcmd)
+		{
+			$pipes = [];
+			if ($check = proc_open($checkcmd, [['pipe', 'r'], ['pipe', 'w'], ['pipe', 'w']], $pipes))
+			{
+				fputs($pipes[0], $documents[$uri]);
+				fclose($pipes[0]);
+
+				$checkoutput = stream_get_contents($pipes[1]);
+				fclose($pipes[1]);
+				fclose($pipes[2]);
+
+				foreach (explode("\n", $checkoutput) as $line)
+				{
+					# PHP Parse error:  syntax error, unexpected token "%", expecting end of file in Standard input code on line 3
+					# t.php:28 $d used only once: $d = 42;
+					if (preg_match('/^[^:]+:\s+(?<message>.*) in Standard input code on line (?<line>\d+)/', $line, $checkmatches) ||
+					    preg_match('/^\S+:(?<line>\d+):\d+:?\s+(?<message>.*)/', $line, $checkmatches))
+					{
+						['line' => $checkline, 'message' => $checkmessage] = $checkmatches;
+						$diagnostics[] = [
+							'range'   => ['start' => ['line' => $checkline - 1, 'character' => 0], 'end' => ['line' => $checkline - 1, 'character' => 0]],
+							'severity' => preg_match('/error/', $checkmessage) ? 1 : 2,	# 1=Error, 2=Warning
+							'message' => $checkmessage,
+						];
+					}
+				}
+
+				proc_close($check);
+
+				$response = json_encode([
+					'method' => 'textDocument/publishDiagnostics',
+					'params' => [
+						'uri' => $uri,
+						'diagnostics' => $diagnostics,
+					],
+				]);
+
+			}
+		}
+
+		fputs($sockets[0], "$response\n");
+		fclose($sockets[0]);
+		exit(0);
+	}
 }
