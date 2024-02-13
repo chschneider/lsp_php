@@ -102,10 +102,10 @@ while (!feof(STDIN))
 				'result' => $req->params->context->triggerKind == 1
 				? array_merge(
 					array_map(fn($v) => ['kind' => 3, 'label' => $v['name'], 'insertText' => $v['name'] . '('], symbols($documents[$req->params->textDocument->uri])),
-					array_map(fn($v) => ['kind' => 3, 'label' => $v, 'insertText' => $v . '('], get_defined_functions()['internal'])
+					array_map(fn($v) => ['kind' => 3, 'label' => $v, 'insertText' => $v . '(', 'documentation' => documentation(reflectionfunction($v))['contents']], get_defined_functions()['internal'])
 				)
 				: ($req->params->context->triggerKind == 2 && $req->params->context->triggerCharacter == '::' && ($class = reflectionclass(rtrim(identifier($documents[$req->params->textDocument->uri], $req->params->position), ':')))
-					? array_map(fn($v) => ['kind' => 2, 'label' => $v->name, 'insertText' => $v->name . '('],
+					? array_map(fn($v) => ['kind' => 2, 'label' => $v->name, 'insertText' => $v->name . '(', 'documentation' => documentation($v)['contents']],
 						$class->getMethods(ReflectionMethod::IS_STATIC)
 					)
 					: null
@@ -225,46 +225,56 @@ function symbol($document, $req)
 	$identifier = identifier($document, $req->params->position);
 	$name = preg_replace('/^\w+::/', '', $identifier);
 
-	try { $funcref = new ReflectionMethod($identifier);   } catch (Exception) {}
-	try { $funcref = new ReflectionFunction($identifier); } catch (Exception) {}
+	try { $reflection = new ReflectionMethod($identifier);   } catch (Exception) {}
+	try { $reflection = new ReflectionFunction($identifier); } catch (Exception) {}
 
-	if ($funcref)
+	if (!($symbol = documentation($reflection)))
 	{
-		if ($filename = $funcref->getFileName())
+		$uri = $req->params->textDocument->uri;
+		$range =  array_values(array_filter(symbols($document), fn($v) => $name === $v['name']))[0]['range'];
+		$contents = explode("\n", $document)[$range['start']['line']];  # Whole line of function definition
+		$symbol = [
+			'uri' => $uri,
+			'range' => $range,
+			'contents' => $contents,
+		];
+	}
+
+	return $symbol;
+}
+
+function documentation($reflection)
+{
+	if ($reflection)
+	{
+		if ($filename = $reflection->getFileName())
 		{
-			$document = file_get_contents($filename);
 			$uri = "file://$filename";
-			$range =  array_values(array_filter(symbols($document), fn($v) => $name === $v['name']))[0]['range'];
+			$range =  ['start' => ['line' => $reflection->getStartLine(), 'character' => 0], 'end' => ['line' => $reflection->getEndLine(), 'character' => 0]];
 		}
 
-		$doccomment = $funcref->getDocComment();
+		$doccomment = $reflection->getDocComment();
 		$contents = trim('***' .
-			($funcref->isStatic ? 'static ' : '') .
+			($reflection->isStatic ? 'static ' : '') .
 			# 'function ' .
-			"$identifier(" .
+			"$reflection->name(" .
 			implode(', ', array_map(fn($v) =>
 				($v->isVariadic() ? '...' : '') .
 				($v->allowsNull ? '?' : '') .
 				trim($v->getType() . ' $' . $v->getName()) .
 				($v->isDefaultValueAvailable() ? (' = ' . ($v->isDefaultValueConstant() ? $v->getDefaultValueConstantName() : json_encode($v->getDefaultValue()))) : ''),
-				$funcref->getParameters()
+				$reflection->getParameters()
 			)) .
-			') : ' . ($funcref->getReturnType() ?: '?') .
+			') : ' . ($reflection->getReturnType() ?: '?') .
 			"***\n\n" .
 			preg_replace('!^[\s*/]*!m', '', $doccomment)
 		);
 	}
-	else
-	{
-		$uri = $req->params->textDocument->uri;
-		$range =  array_values(array_filter(symbols($document), fn($v) => $name === $v['name']))[0]['range'];
-		$contents = explode("\n", $document)[$range['start']['line']];  # Whole line of function definition
-	}
 
 	return [
-		'uri' => $uri,
-		'range' => $range,
-		'contents' => $contents,
+		'uri' => $uri ?? null,
+		'range' => $range ?? null,
+		'contents' => $contents ?? null,
 	];
 }
 
@@ -357,8 +367,14 @@ function check($documents, $uri, $checkcmds)
 	}
 }
 
+function reflectionfunction($name)
+{
+	try { $reflection = new ReflectionFunction($name); } catch (Exception) {}
+	return $reflection ?? null;
+}
+
 function reflectionclass($name)
 {
-	try { $class = new ReflectionClass($name); } catch (Exception) {}
-	return $class ?? null;
+	try { $reflection = new ReflectionClass($name); } catch (Exception) {}
+	return $reflection ?? null;
 }
