@@ -1,29 +1,39 @@
 #!/usr/bin/env php
 <?php
 
-$opts = getopt("c:Cfhi:l::", ['check-cmds:', 'check-only', 'full-sync', 'help', 'include-path:', 'log::']);
-$default_log = '~/.cache/helix/lsp_php.log';
+$opts = getopt("a::c::Cfhi:l::", ['autoload::', 'check-cmds::', 'check-only', 'full-sync', 'help', 'include-path:', 'log::']);
+$default_checkcmds = 'php -nl,phplint.php -f';
+$default_suffix    = '.php,.inc';
+$default_include   = 'phpinclude';
+$default_log       = '~/.cache/helix/lsp_php.log';
 
 if (isset($opts['h']) || isset($opts['help']))
 {
 	fputs(STDERR, <<<USAGE
 Usage: $argv[0] [OPTIONS]
 Options:
-  -c=CMDS, --check-cmds=CMDS    Run these syntax check / lint commands on code
-  -C,       --check-only        Only run check-cmds, no other functionality
-  -f,      --full-sync          Use full instead of incremental sync
-  -h,      --help               Show usage
-  -i=PATH, --include-path=PATH  Prepend PATH to the include path
-  -l=FILE, --log=FILE           Enable logging to FILE, default $default_log
+  -a=SUFFIX, --autoload=SUFFIX    Autoload from include_path with SUFFIX, [$default_suffix]
+  -c=CMDS,   --check-cmds=CMDS    Run syntax check/lint CMDS on code [$default_checkcmds]
+  -C,        --check-only         Only run check-cmds, no other functionality
+  -f,        --full-sync          Use full instead of incremental sync
+  -h,        --help               Show usage
+  -i=PATH,   --include-path=PATH  Prepend PATH to the include path [$default_include]
+  -l=FILE,   --log=FILE           Enable logging to FILE, [$default_log]
 
 USAGE);
 	exit(1);
 }
 
-if ($include_path = $opts['i'] ?? $opts['include-path'] ?? false)
-	ini_set('include_path', "$include_path:" . ini_get('include_path'));
+$include_path = ($opts['i'] ?? $opts['include-path'] ?? null) ?: $default_include;
+ini_set('include_path', "$include_path:" . ini_get('include_path'));
 
-$checkcmds = $opts['c'] ?? $opts['check-cmds'] ?? 'php -nl;phplint.php -f';
+if (!is_null($suffix = $opts['a'] ?? $opts['autoload'] ?? null))
+{
+	spl_autoload_extensions($suffix ?: $default_suffix);
+	spl_autoload_register();
+}
+
+$checkcmds = $opts['c'] ?? $opts['check-cmds'] ?? null ?: $default_checkcmds;
 $allfeatures = $opts['C'] ?? $opts['check-only'] ?? true;
 
 $log = fopen(($logfile = $opts['l'] ?? $opts['log'] ?? '/dev/null') ? $logfile : str_replace('~', getenv('HOME'), $default_log), 'a');
@@ -321,7 +331,7 @@ function check($documents, $uri, $checkcmds)
 		fclose($sockets[1]);
 		$diagnostics = [];
 
-		foreach (explode(';', $checkcmds) as $checkcmd)
+		foreach (explode(',', $checkcmds) as $checkcmd)
 		{
 			$pipes = [];
 			if ($check = proc_open($checkcmd, [['pipe', 'r'], ['pipe', 'w'], ['pipe', 'w']], $pipes))
