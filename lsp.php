@@ -285,24 +285,24 @@ function check($documents, $uri, $checkcmds)
 			unset($sockets[0]);
 		}
 
+		if ($checkcmds)
+			$queued = [$documents, $uri, $checkcmds];
+
 		if (pcntl_waitpid($child, $dummy_status, WNOHANG))
 		{
 			$response = fgets($sockets[1]);
 			fclose($sockets[1]);
 			$child = $sockets = null;
 
-			if ($response)
-				fputs(STDOUT, "Content-Length: " . strlen($response) . "\r\n\r\n" . $response);
 
 			if ($queued)
 			{
 				check(...$queued);	# Start last check which queued up while other check was running
 				$queued = null;
 			}
-
+			else if ($response)
+				fputs(STDOUT, "Content-Length: " . strlen($response) . "\r\n\r\n" . $response);
 		}
-		else if ($checkcmds)
-			$queued = [$documents, $uri, $checkcmds];
 	}
 	else if ($checkcmds && !($child = pcntl_fork()))
 	{
