@@ -67,6 +67,7 @@ while (!feof(STDIN))
 						'implementationProvider' => $allfeatures,
 						'documentSymbolProvider' => $allfeatures,
 						'hoverProvider'          => $allfeatures,
+						'completionProvider'     => $allfeatures ? ['resolveProvider' => false, 'triggerCharacters' => ['::']] : false,
 					],
 				],
 			],
@@ -95,6 +96,20 @@ while (!feof(STDIN))
 
 			'textDocument/implementation', 'textDocument/hover' => [
 				'result' => symbol($documents[$req->params->textDocument->uri], $req),
+			],
+
+			'textDocument/completion' => [
+				'result' => $req->params->context->triggerKind == 1
+				? array_merge(
+					array_map(fn($v) => ['kind' => 3, 'label' => $v['name'], 'insertText' => $v['name'] . '('], symbols($documents[$req->params->textDocument->uri])),
+					array_map(fn($v) => ['kind' => 3, 'label' => $v, 'insertText' => $v . '('], get_defined_functions()['internal'])
+				)
+				: ($req->params->context->triggerKind == 2 && $req->params->context->triggerCharacter == '::' && ($class = reflectionclass(rtrim(identifier($documents[$req->params->textDocument->uri], $req->params->position), ':')))
+					? array_map(fn($v) => ['kind' => 2, 'label' => $v->name, 'insertText' => $v->name . '('],
+						$class->getMethods(ReflectionMethod::IS_STATIC)
+					)
+					: null
+				),
 			],
 
 			'shutdown', 'exit' => [],
@@ -340,4 +355,10 @@ function check($documents, $uri, $checkcmds)
 		fclose($sockets[0]);
 		exit(0);
 	}
+}
+
+function reflectionclass($name)
+{
+	try { $class = new ReflectionClass($name); } catch (Exception) {}
+	return $class ?? null;
 }
