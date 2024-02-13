@@ -2,6 +2,7 @@
 <?php
 
 $opts = getopt("c:Cfhi:l::", ['check-cmds:', 'check-only', 'full-sync', 'help', 'include-path:', 'log::']);
+$default_log = '~/.cache/helix/lsp_php.log';
 
 if (isset($opts['h']) || isset($opts['help']))
 {
@@ -12,8 +13,8 @@ Options:
   -C,       --check-only        Only run check-cmds, no other functionality
   -f,      --full-sync          Use full instead of incremental sync
   -h,      --help               Show usage
-  -i=PATH, --include-path=PATH  Prepend this path to the include path
-  -l=FILE, --log=FILE           Enable logging to file FILE
+  -i=PATH, --include-path=PATH  Prepend PATH to the include path
+  -l=FILE, --log=FILE           Enable logging to FILE, default $default_log
 
 USAGE);
 	exit(1);
@@ -25,7 +26,7 @@ if ($include_path = $opts['i'] ?? $opts['include-path'] ?? false)
 $checkcmds = $opts['c'] ?? $opts['check-cmds'] ?? 'php -nl;phplint.php -f';
 $allfeatures = $opts['C'] ?? $opts['check-only'] ?? true;
 
-$log = fopen(($logfile = $opts['l'] ?? $opts['log'] ?? '/dev/null') ? $logfile : (getenv('HOME') . '/.cache/helix/lsp_php.log'), 'a');
+$log = fopen(($logfile = $opts['l'] ?? $opts['log'] ?? '/dev/null') ? $logfile : str_replace('~', getenv('HOME'), $default_log), 'a');
 $state = 'new';
 $len = null;
 $documents = [];

@@ -24,8 +24,8 @@ Options:
   -C,       --check-only        Only run check-cmds, no other functionality
   -f,      --full-sync          Use full instead of incremental sync
   -h,      --help               Show usage
-  -i=PATH, --include-path=PATH  Prepend this path to the include path
-  -l=FILE, --log=FILE           Enable logging to file FILE (default: ~/.cache/helix/lsp_php.log)
+  -i=PATH, --include-path=PATH  Prepend PATH to the include path
+  -l=FILE, --log=FILE           Enable logging to FILE, default is ~/.cache/helix/lsp_php.log
 ```
 
 ## Features
