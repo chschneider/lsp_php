@@ -303,7 +303,7 @@ function check($documents, $uri, $checkcmds)
 		if ($sockets[0])
 		{
 			fclose($sockets[0]);
-			unset($sockets[0]);
+			$sockets[0] = null;
 		}
 
 		if ($checkcmds)
