@@ -67,7 +67,7 @@ while (!feof(STDIN))
 						'implementationProvider' => $allfeatures,
 						'documentSymbolProvider' => $allfeatures,
 						'hoverProvider'          => $allfeatures,
-						'completionProvider'     => $allfeatures ? ['resolveProvider' => false, 'triggerCharacters' => ['::']] : false,
+						'completionProvider'     => $allfeatures ? ['resolveProvider' => false, 'triggerCharacters' => ['::']] : null,
 					],
 				],
 			],
