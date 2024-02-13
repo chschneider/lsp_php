@@ -21,10 +21,11 @@ Example configration for helix in .config/helix/languages.toml
 Usage: lsp.php [OPTIONS]
 Options:
   -c=CMDS, --check-cmds=CMDS    Run these syntax check / lint commands on code
+  -C,       --check-only        Only run check-cmds, no other functionality
   -f,      --full-sync          Use full instead of incremental sync
   -h,      --help               Show usage
   -i=PATH, --include-path=PATH  Prepend this path to the include path
-  -l=FILE, --log=FILE           Enable logging to file FILE
+  -l=FILE, --log=FILE           Enable logging to file FILE (default: ~/.cache/helix/lsp_php.log)
 ```
 
 ## Features
