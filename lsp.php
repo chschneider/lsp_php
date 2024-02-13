@@ -250,7 +250,7 @@ function documentation($reflection)
 		if ($filename = $reflection->getFileName())
 		{
 			$uri = "file://$filename";
-			$range =  ['start' => ['line' => $reflection->getStartLine(), 'character' => 0], 'end' => ['line' => $reflection->getEndLine(), 'character' => 0]];
+			$range =  ['start' => ['line' => $reflection->getStartLine() - 1, 'character' => 0], 'end' => ['line' => $reflection->getStartLine(), 'character' => 0]];
 		}
 
 		$doccomment = $reflection->getDocComment();
