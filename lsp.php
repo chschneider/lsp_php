@@ -112,11 +112,11 @@ while (!feof(STDIN))
 			'textDocument/completion' => [
 				'result' => $req->params->context->triggerKind == 1
 				? array_merge(
-					array_map(fn($v) => ['kind' => 3, 'label' => $v['name'], 'insertText' => $v['name'] . '('], symbols($documents[$req->params->textDocument->uri])),
-					array_map(fn($v) => ['kind' => 3, 'label' => $v, 'insertText' => $v . '(', 'documentation' => documentation(reflectionfunction($v))['contents']], get_defined_functions()['internal'])
+					array_map(fn($v) => completion($v['name']), symbols($documents[$req->params->textDocument->uri])),
+					array_map(fn($v) => completion($v) + ['documentation' => documentation(reflectionfunction($v))['contents']], get_defined_functions()['internal'])
 				)
 				: ($req->params->context->triggerKind == 2 && $req->params->context->triggerCharacter == '::' && ($class = reflectionclass(rtrim(identifier($documents[$req->params->textDocument->uri], $req->params->position), ':')))
-					? array_map(fn($v) => ['kind' => 2, 'label' => $v->name, 'insertText' => $v->name . '(', 'documentation' => documentation($v)['contents']],
+					? array_map(fn($v) => completion($v->name, 2) + ['documentation' => documentation($v)['contents']],
 						$class->getMethods(ReflectionMethod::IS_STATIC)
 					)
 					: null
@@ -388,4 +388,9 @@ function reflectionclass($name)
 {
 	try { $reflection = new ReflectionClass($name); } catch (Exception) {}
 	return $reflection ?? null;
+}
+
+function completion($name, $kind = 2)
+{
+	return ['kind' => $kind, 'label' => $name, 'insertTextFormat' => 2, 'insertText' => $name . '(${1})'];
 }
