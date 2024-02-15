@@ -133,11 +133,11 @@ while (!feof(STDIN))
 			],
 		};
 
-		$response = @json_encode([
+		$response = @json_encode(array_filter([
 			'id'     => $req->id,
 			'result' => $result,
-			'error'  => $error,
-		]);
+			'error'  => $error ?? (isset($result) ? null : false),	# vim-lsp does not like null, set error to false if we have no result
+		], fn($v) => $v !== null));
 
 		if (isset($req->id))
 		{
