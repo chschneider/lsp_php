@@ -73,12 +73,13 @@ while (!feof(STDIN))
 			'initialize' => [
 				'result' => [
 					'capabilities' => [
-						'positionEncoding'       => 'utf-8',
-						'textDocumentSync'       => (isset($opts['f']) || isset($opts['full-sync'])) ? 1 : 2,  # 1=Full, 2=Incremental
-						'implementationProvider' => $allfeatures,
-						'documentSymbolProvider' => $allfeatures,
-						'hoverProvider'          => $allfeatures,
-						'completionProvider'     => $allfeatures ? ['resolveProvider' => false, 'triggerCharacters' => ['::']] : null,
+						'positionEncoding'              => 'utf-8',
+						'textDocumentSync'              => (isset($opts['f']) || isset($opts['full-sync'])) ? 1 : 2,  # 1=Full, 2=Incremental
+						'implementationProvider'        => $allfeatures,
+						'documentSymbolProvider'        => $allfeatures,
+						'hoverProvider'                 => $allfeatures,
+						'completionProvider'            => $allfeatures ? ['resolveProvider' => false, 'triggerCharacters' => ['::']] : null,
+						'documentHighlightProvider'     => $allfeatures,
 					],
 				],
 			],
@@ -102,7 +103,7 @@ while (!feof(STDIN))
 			],
 
 			'textDocument/documentSymbol' => [
-				'result' => symbols($documents[$req->params->textDocument->uri]),
+				'result' => array_map(fn($v) => ['children' => []] + $v, symbols($documents[$req->params->textDocument->uri])),
 			],
 
 			'textDocument/implementation', 'textDocument/hover' => [
@@ -119,8 +120,12 @@ while (!feof(STDIN))
 					? array_map(fn($v) => completion($v->name, 2) + ['documentation' => documentation($v)['contents']],
 						$class->getMethods(ReflectionMethod::IS_STATIC)
 					)
-					: null
+					: []
 				),
+			],
+
+			'textDocument/documentHighlight' => [
+				'result' => array_map(fn($v) => ['range' => $v['range'], 'kind' => 1], symbols($documents[$req->params->textDocument->uri], $req)),	# Kind 1=Text
 			],
 
 			'shutdown', 'exit' => [],
@@ -133,11 +138,11 @@ while (!feof(STDIN))
 			],
 		};
 
-		$response = @json_encode(array_filter([
+		$response = @json_encode([
 			'id'     => $req->id,
 			'result' => $result,
-			'error'  => $error ?? (isset($result) ? null : false),	# vim-lsp does not like null, set error to false if we have no result
-		], fn($v) => $v !== null));
+			'error'  => $error,
+		]);
 
 		if (isset($req->id))
 		{
@@ -157,64 +162,107 @@ while (!feof(STDIN))
 	}
 }
 
-# Helper function
-function symbols($document)
+# Helper functions
+function symbols($document, $req = null)
 {
 	# To generate symbol table
 	$symbols = [];
-	$line = $col = 0;
-	$functiondef = false;
+	$funcdef = false;
+	$funcbody = false;
+	$funcname = null;
+	$level = -42;
+	$identifier = $req ? identifier($document, $req->params->position) : null;
+	$identifier_offset= $req ? offset($document, $req->params->position) : null;
 
-	$result = array_values(array_filter(array_map(function($token) use (&$functiondef, &$line, &$col, $symbols) {
-		if ($line != intval($token[2]) - 1)
-			[$line, $col] = [intval($token[2]) - 1, 0];
+	foreach (PhpToken::tokenize((string)$document) as $token)
+	{
+		[$line, $col] = position($document, $token->pos);
 
-		switch ($token[0])
+		if ($token->isIgnorable())
+			continue;
+
+		switch ($token->id)
 		{
-			case T_WHITESPACE: case T_DOC_COMMENT: case T_COMMENT:
-				break;
-
 			case T_FUNCTION:
-				$functiondef = true;
+				if (!$funcbody)	# Anonymous function inside function?
+				{
+					$funcdef = true;
+					$funcname = null;
+					$funcstart = ['line' => $line, 'character' => $col];
+					$funcchildren = [];	# Children symbols of this function, e.g. variables
+					$level = 0;
+				}
 				break;
 
-			case T_STRING:
-				if ($functiondef)
+			case ord('{'):
+				if (!$level++)
+					$funcbody = true;
+				break;
+
+			case ord('}'):
+				if (!--$level)
 				{
-					return [
-						'name' => $token[1],
-						'kind' => 12,  # Function
+					$funcbody = false;
+					$funcend = ['line' => $line, 'character' => $col + 1];
+					$children = array_merge(...array_values($funcchildren));
+					$symbols[] = [
+						'name' => $funcname,
+						'kind' => 12,  # 12=Function
+						'range' => [
+							'start' => $funcstart,
+							'end'   => $funcend,
+						],
+						'selectionRange' => [
+							'start' => $funcstart,
+							'end'   => $funcstart,
+						],
+						'children' => $children,
+					];
+
+					if ($identifier && offset($document, $funcstart) <= $identifier_offset && offset($document, $funcend) > $identifier_offset)
+						$identifiers = array_values(array_filter($children, fn($v) => $v['name'] == $identifier));
+
+					$funcbody = $false;
+					$level = -42;
+				}
+				break;
+			
+			case T_STRING:
+				if ($funcdef)
+					$funcname ??= $token->text;
+				break;
+
+			case T_VARIABLE:
+				if ($funcdef || $funcbody)
+				{
+					$funcchildren[$token->text][] = [
+						'name' => $token->text,
+						'kind' => 13,  # 13=Variable
 						'range' => [
 							'start' => ['line' => $line, 'character' => $col],
-							'end'   => ['line' => $line, 'character' => $col + strlen($token[1])],
+							'end'   => ['line' => $line, 'character' => $col + strlen($token->text)],
 						],
 						'selectionRange' => [
 							'start' => ['line' => $line, 'character' => $col],
-							'end'   => ['line' => $line, 'character' => $col + strlen($token[1])],
+							'end'   => ['line' => $line, 'character' => $col + strlen($token->text)],
 						],
 					];
 				}
-
-			default:
-				$functiondef = false;
 				break;
 		}
+	}
 
-		$col += strlen($token[1]);
-		return null;
-	}, token_get_all((string)$document))));
-
-	return $result;
+	return $identifiers ?? $symbols;
 }
 
 function identifier($document, $position)
 {
 	$start = $end = offset($document, $position);
 
-	while ($start > 0 && (IntlChar::chr($document[$start - 1]) === null || preg_match('/[\w:]/u', $document[$start - 1])))
+	while ($start > 0 && (IntlChar::chr($document[$start - 1]) === null || preg_match('/[$\w:]/u', $document[$start - 1])))
 		$start--;
 
-	while ($end < strlen($document) && (IntlChar::chr($document[$end]) === null || preg_match('/[\w:]/u', $document[$end])))
+	while ($end < strlen($document) && (IntlChar::chr($document[$end]) === null || preg_match('/[$\w:]/u', $document[$end])))
 		$end++;
 
 	return substr($document, $start, $end - $start);
@@ -229,6 +277,13 @@ function offset($document, $position)
 	$start = $start + $character;
 
 	return $start;
+}
+
+function position($document, $offset)
+{
+	$lines = explode("\n", substr($document, 0, $offset));
+	$line = count($lines) - 1;
+	return [$line, strlen($lines[$line])];
 }
 
 function symbol($document, $req)
