@@ -121,7 +121,7 @@ while (!feof(STDIN))
 					array_map(fn($v) => completion($identifier, $v), get_defined_functions()['internal'])
 				)))) < 30 ? $completions : [])
 				: ($req->params->context->triggerKind == 2 && $req->params->context->triggerCharacter == '::' && ($class = reflectionclass(rtrim($identifier, ':')))
-					? array_values(array_filter(array_map(fn($v) => completion($identifier, "$class->name::$v->name"),
+					? array_values(array_filter(array_map(fn($v) => completion($identifier, "$class->name::$v->name", 2),	# 2=Method
 						$class->getMethods(ReflectionMethod::IS_STATIC)
 					)))
 					: []
@@ -446,7 +446,7 @@ function reflectionclass($name)
 	return $reflection ?? null;
 }
 
-function completion($identifier, $name, $kind = 2)
+function completion($identifier, $name, $kind = 3)
 {
 	$func = preg_replace('/^\w+::/', '', $name);
 
