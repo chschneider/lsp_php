@@ -115,17 +115,14 @@ while (!feof(STDIN))
 			],
 
 			'textDocument/completion' => [
-				'result' => $req->params->context->triggerKind == 1
-				? (count($completions = array_values(array_filter(array_merge(
+				'result' => str_contains($identifier, '::') && ($class = reflectionclass(rtrim($identifier, ':')))
+				? array_values(array_filter(array_map(fn($v) => completion($identifier, "$class->name::$v->name", 2),	# 2=Method
+					$class->getMethods(ReflectionMethod::IS_STATIC)
+				)))
+				: (count($completions = array_values(array_filter(array_merge(
 					array_map(fn($v) => completion($identifier, $v['name']), symbols($document)),
 					array_map(fn($v) => completion($identifier, $v), get_defined_functions()['internal'])
-				)))) < 30 ? $completions : [])
-				: ($req->params->context->triggerKind == 2 && $req->params->context->triggerCharacter == '::' && ($class = reflectionclass(rtrim($identifier, ':')))
-					? array_values(array_filter(array_map(fn($v) => completion($identifier, "$class->name::$v->name", 2),	# 2=Method
-						$class->getMethods(ReflectionMethod::IS_STATIC)
-					)))
-					: []
-				),
+				)))) < 60 ? $completions : [])
 			],
 
 			'textDocument/documentHighlight' => [
