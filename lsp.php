@@ -68,6 +68,10 @@ while (!feof(STDIN))
 	if ($req)
 	{
 		unset($result, $error);
+		$document = isset($req->params->textDocument) ? ($documents[$req->params->textDocument->uri] ?? null) : null;
+		$uri = isset($req->params->textDocument->uri) ? ($req->params->textDocument->uri)                     : null;
+		$identifier = isset($req->params->position)   ? identifier($document, $req->params->position)         : null;
+		$offset = isset($req->params->position)       ? offset($document, $req->params->position)             : null;
 
 		@['result' => $result, 'error' => $error] = match($req->method) {
 			'initialize' => [
@@ -85,47 +89,47 @@ while (!feof(STDIN))
 			],
 
 			'textDocument/didOpen' => [
-				'void' => $documents[$req->params->textDocument->uri] = $req->params->textDocument->text,
+				'void' => $documents[$uri] = $document = $req->params->textDocument->text,
 			],
 
 			'textDocument/didChange' => [
-				'void' => $documents[$req->params->textDocument->uri] = array_reduce(
+				'void' => $documents[$uri] = $document = array_reduce(
 					$req->params->contentChanges,
 					fn($d, $v) => $v->range
 						? (substr($d, 0, offset($d, $v->range->start)) . $v->text . substr($d, offset($d, $v->range->end)))
 						: $v->text,
-					$documents[$req->params->textDocument->uri]
+					$document
 				),
 			],
 
 			'textDocument/didClose' => [
-				'void' => $documents[$req->params->textDocument->uri] = null,
+				'void' => $documents[$uri] = $document = null,
 			],
 
 			'textDocument/documentSymbol' => [
-				'result' => array_map(fn($v) => ['children' => []] + $v, symbols($documents[$req->params->textDocument->uri])),
+				'result' => array_map(fn($v) => ['children' => []] + $v, symbols($document)),
 			],
 
 			'textDocument/implementation', 'textDocument/hover' => [
-				'result' => symbol($documents[$req->params->textDocument->uri], $req),
+				'result' => symbol($document, $uri, $identifier),
 			],
 
 			'textDocument/completion' => [
 				'result' => $req->params->context->triggerKind == 1
-				? array_merge(
-					array_map(fn($v) => completion($v['name']), symbols($documents[$req->params->textDocument->uri])),
-					array_map(fn($v) => completion($v) + ['documentation' => documentation(reflectionfunction($v))['contents']], get_defined_functions()['internal'])
-				)
-				: ($req->params->context->triggerKind == 2 && $req->params->context->triggerCharacter == '::' && ($class = reflectionclass(rtrim(identifier($documents[$req->params->textDocument->uri], $req->params->position), ':')))
-					? array_map(fn($v) => completion($v->name, 2) + ['documentation' => documentation($v)['contents']],
+				? (count($completions = array_values(array_filter(array_merge(
+					array_map(fn($v) => completion($identifier, $v['name']), symbols($document)),
+					array_map(fn($v) => completion($identifier, $v), get_defined_functions()['internal'])
+				)))) < 30 ? $completions : [])
+				: ($req->params->context->triggerKind == 2 && $req->params->context->triggerCharacter == '::' && ($class = reflectionclass(rtrim($identifier, ':')))
+					? array_values(array_filter(array_map(fn($v) => completion($identifier, "$class->name::$v->name"),
 						$class->getMethods(ReflectionMethod::IS_STATIC)
-					)
+					)))
 					: []
 				),
 			],
 
 			'textDocument/documentHighlight' => [
-				'result' => array_map(fn($v) => ['range' => $v['range'], 'kind' => 1], symbols($documents[$req->params->textDocument->uri], $req)),	# Kind 1=Text
+				'result' => array_map(fn($v) => ['range' => $v['range'], 'kind' => 1], symbols($document, $identifier, $offset)),	# Kind 1=Text
 			],
 
 			'shutdown', 'exit' => [],
@@ -163,7 +167,7 @@ while (!feof(STDIN))
 }
 
 # Helper functions
-function symbols($document, $req = null)
+function symbols($document, $identifier = null, $offset = null)
 {
 	# To generate symbol table
 	$symbols = [];
@@ -171,8 +175,6 @@ function symbols($document, $req = null)
 	$funcbody = false;
 	$funcname = null;
 	$level = -42;
-	$identifier = $req ? identifier($document, $req->params->position) : null;
-	$identifier_offset= $req ? offset($document, $req->params->position) : null;
 
 	foreach (PhpToken::tokenize((string)$document) as $token)
 	{
@@ -219,10 +221,10 @@ function symbols($document, $req = null)
 						'children' => $children,
 					];
 
-					if ($identifier && offset($document, $funcstart) <= $identifier_offset && offset($document, $funcend) > $identifier_offset)
+					if ($identifier && offset($document, $funcstart) <= $offset && offset($document, $funcend) > $offset)
 						$identifiers = array_values(array_filter($children, fn($v) => $v['name'] == $identifier));
 
-					$funcbody = $false;
+					$funcbody = false;
 					$level = -42;
 				}
 				break;
@@ -286,9 +288,8 @@ function position($document, $offset)
 	return [$line, strlen($lines[$line])];
 }
 
-function symbol($document, $req)
+function symbol($document, $uri, $identifier)
 {
-	$identifier = identifier($document, $req->params->position);
 	$name = preg_replace('/^\w+::/', '', $identifier);
 
 	try { $reflection = new ReflectionMethod($identifier);   } catch (Exception) {}
@@ -296,7 +297,6 @@ function symbol($document, $req)
 
 	if (!($symbol = documentation($reflection))['contents'])
 	{
-		$uri = $req->params->textDocument->uri;
 		$range =  array_values(array_filter(symbols($document), fn($v) => $name === $v['name']))[0]['range'];
 		$contents = explode("\n", $document)[$range['start']['line']];  # Whole line of function definition
 		$symbol = [
@@ -436,6 +436,7 @@ function check($documents, $uri, $checkcmds)
 function reflectionfunction($name)
 {
 	try { $reflection = new ReflectionFunction($name); } catch (Exception) {}
+	try { $reflection = new ReflectionMethod($name); } catch (Exception) {}
 	return $reflection ?? null;
 }
 
@@ -445,7 +446,15 @@ function reflectionclass($name)
 	return $reflection ?? null;
 }
 
-function completion($name, $kind = 2)
+function completion($identifier, $name, $kind = 2)
 {
-	return ['kind' => $kind, 'label' => $name, 'insertTextFormat' => 2, 'insertText' => $name . '(${1})'];
+	$func = preg_replace('/^\w+::/', '', $name);
+
+	return str_starts_with($name, $identifier) ? array_filter([
+		'kind' => $kind,
+		'label' => $func,
+		'insertTextFormat' => 2,
+		'insertText' => $func . '(${1})',
+		'documentation' => documentation(reflectionfunction($name))['contents'],
+	]) : [];
 }
