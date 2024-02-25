@@ -115,7 +115,7 @@ while (!feof(STDIN))
 			],
 
 			'textDocument/completion' => [
-				'result' => str_contains($identifier, '::') && ($class = reflectionclass(rtrim($identifier, ':')))
+				'result' => str_contains($identifier, '::') && ($class = reflection(rtrim($identifier, ':')))
 				? array_values(array_filter(array_map(fn($v) => completion($identifier, "$class->name::$v->name", 2),	# 2=Method
 					$class->getMethods(ReflectionMethod::IS_STATIC)
 				)))
@@ -288,9 +288,7 @@ function position($document, $offset)
 function symbol($document, $uri, $identifier)
 {
 	$name = preg_replace('/^\w+::/', '', $identifier);
-
-	try { $reflection = new ReflectionMethod($identifier);   } catch (Exception) {}
-	try { $reflection = new ReflectionFunction($identifier); } catch (Exception) {}
+	$reflection = reflection($identifier);
 
 	if (!($symbol = documentation($reflection))['contents'])
 	{
@@ -430,16 +428,11 @@ function check($documents, $uri, $checkcmds)
 	}
 }
 
-function reflectionfunction($name)
+function reflection($name)
 {
 	try { $reflection = new ReflectionFunction($name); } catch (Exception) {}
-	try { $reflection = new ReflectionMethod($name); } catch (Exception) {}
-	return $reflection ?? null;
-}
-
-function reflectionclass($name)
-{
-	try { $reflection = new ReflectionClass($name); } catch (Exception) {}
+	try { $reflection = new ReflectionMethod($name);   } catch (Exception) {}
+	try { $reflection = new ReflectionClass($name);    } catch (Exception) {}
 	return $reflection ?? null;
 }
 
@@ -452,6 +445,6 @@ function completion($identifier, $name, $kind = 3)
 		'label' => $func,
 		'insertTextFormat' => 2,
 		'insertText' => $func . '(${1})',
-		'documentation' => documentation(reflectionfunction($name))['contents'],
+		'documentation' => documentation(reflection($name))['contents'],
 	]) : [];
 }
