@@ -84,6 +84,7 @@ while (!feof(STDIN))
 						'hoverProvider'                 => $allfeatures,
 						'completionProvider'            => $allfeatures ? ['resolveProvider' => false, 'triggerCharacters' => ['::']] : null,
 						'documentHighlightProvider'     => $allfeatures,
+						'codeActionProvider'            => $allfeatures,
 					],
 				],
 			],
@@ -127,6 +128,12 @@ while (!feof(STDIN))
 
 			'textDocument/documentHighlight' => [
 				'result' => array_map(fn($v) => ['range' => $v['range'], 'kind' => 1], symbols($document, $identifier, $offset)),	# Kind 1=Text
+			],
+
+			'textDocument/codeAction' => [
+				'result' => [
+					blockify($document, $uri, $req->params->range),
+				],
 			],
 
 			'shutdown', 'exit' => [],
@@ -447,4 +454,31 @@ function completion($identifier, $name, $kind = 3)
 		'insertText' => $func . '(${1})',
 		'documentation' => documentation(reflection($name))['contents'],
 	]) : [];
+}
+
+# Code actions
+function blockify($document, $uri, $range)
+{
+	$start = offset($document, ['line' => $range->start->line, 'character' => 0]);
+	$end   = offset($document, ['line' => $range->end->line + ($range->end->character ? 1 : 0), 'character' => 0]) - 1;
+
+	$block = substr($document, $start, $end - $start);
+	preg_match('/^\s*/', $block, $match);
+	$indent = $match[0];
+
+	return [
+		'title' => 'blockify',
+		'edit'  => [
+			'documentChanges' => [[
+				'textDocument' => ['uri' => $uri],
+				'edits' => [[
+					'range' => [
+						'start' => position($document, $start),
+						'end'   => position($document, $end),
+					],
+					'newText' => "$indent{\n\t" . preg_replace('/\n/m', "\n\t", $block) . "\n$indent}",
+				]],
+			]],
+		]
+	];
 }
