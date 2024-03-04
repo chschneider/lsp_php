@@ -38,3 +38,4 @@ Currently is supports the following language features:
 | textDocument/implementation     | Goto function implementation                                          | `gi`                |
 | textDocument/publishDiagnostics | Run syntax check/lint on text changes and display errors/warnings     | `Space + d`         |
 | textDocument/completion         | Show completion for PHP builtin functions or static method in classes | `ctrl-x` or `foo::` |
+| textDocument/codeAction         | Perform a code action on a selection, currently `blockify`            | `Space + a`         |
