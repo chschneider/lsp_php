@@ -429,7 +429,7 @@ function check($documents, $uri, $checkcmds)
 			}
 		}
 
-		fputs($sockets[0], "$response\n");
+		@fputs($sockets[0], "$response\n");
 		fclose($sockets[0]);
 		exit(0);
 	}
