@@ -80,6 +80,7 @@ while (!feof(STDIN))
 						'positionEncoding'              => 'utf-8',
 						'textDocumentSync'              => (isset($opts['f']) || isset($opts['full-sync'])) ? 1 : 2,  # 1=Full, 2=Incremental
 						'implementationProvider'        => $allfeatures,
+						'referencesProvider'		=> $allfeatures,
 						'documentSymbolProvider'        => $allfeatures,
 						'hoverProvider'                 => $allfeatures,
 						'completionProvider'            => $allfeatures ? ['resolveProvider' => false, 'triggerCharacters' => ['::']] : null,
@@ -113,6 +114,19 @@ while (!feof(STDIN))
 
 			'textDocument/implementation', 'textDocument/hover' => [
 				'result' => symbol($document, $uri, $identifier),
+			],
+
+			'textDocument/references' => [
+				'result' => array_filter(array_map(
+					fn($v) => preg_match('/^([^:]+):\s*(\d+):\s*(\d+)/', $v, $m) ? [
+						'uri' => 'file://' . realpath($m[1]),
+						'range' => [
+							'start' => ['line' => $m[2] - 1, 'character' => $m[3] - 1],
+							'end'   => ['line' => $m[2] - 1, 'character' => $m[3] - 1],
+						],
+					] : null,
+					explode("\n", shell_exec('git grep --line-number --column ' . escapeshellarg("::$identifier") . ' | tee /tmp/out')),
+				)),
 			],
 
 			'textDocument/completion' => [

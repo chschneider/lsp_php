@@ -35,7 +35,8 @@ Currently is supports the following language features:
 |:--------------------------------|:----------------------------------------------------------------------|:--------------------|
 | textDocument/documentSymbol     | List of functions/methods defined in current document                 | `Space + s`         |
 | textDocument/hover              | Show function definition, i.e. parameters, return type and doccomment | `Space + k`         |
-| textDocument/implementation     | Goto function implementation                                          | `gi`                |
+| textDocument/implementation     | Go to function implementation                                         | `gi`                |
+| textDocument/references         | Go to static function reference, currently only works with git        | `gr`                |
 | textDocument/publishDiagnostics | Run syntax check/lint on text changes and display errors/warnings     | `Space + d`         |
 | textDocument/completion         | Show completion for PHP builtin functions or static method in classes | `ctrl-x` or `foo::` |
 | textDocument/codeAction         | Perform a code action on a selection, currently `blockify`            | `Space + a`         |
