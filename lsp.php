@@ -125,7 +125,7 @@ while (!feof(STDIN))
 							'end'   => ['line' => $m[2] - 1, 'character' => $m[3] - 1],
 						],
 					] : null,
-					explode("\n", shell_exec('git grep --line-number --column ' . escapeshellarg(preg_replace('/^(\w+::|)/', '::', $identifier)) . ' | tee /tmp/out')),
+					explode("\n", shell_exec('git grep --line-number --column ' . escapeshellarg(preg_replace('/^(\w+::|)/', '::', "$identifier(")) . ' | tee /tmp/out')),
 				)),
 			],
 
