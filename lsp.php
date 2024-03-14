@@ -79,6 +79,7 @@ while (!feof(STDIN))
 					'capabilities' => [
 						'positionEncoding'              => 'utf-8',
 						'textDocumentSync'              => (isset($opts['f']) || isset($opts['full-sync'])) ? 1 : 2,  # 1=Full, 2=Incremental
+						'definitionProvider'            => $allfeatures,
 						'implementationProvider'        => $allfeatures,
 						'referencesProvider'		=> $allfeatures,
 						'documentSymbolProvider'        => $allfeatures,
@@ -112,7 +113,7 @@ while (!feof(STDIN))
 				'result' => array_map(fn($v) => ['children' => []] + $v, symbols($document)),
 			],
 
-			'textDocument/implementation', 'textDocument/hover' => [
+			'textDocument/definition', 'textDocument/implementation', 'textDocument/hover' => [
 				'result' => symbol($document, $uri, $identifier),
 			],
 
