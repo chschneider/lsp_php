@@ -335,6 +335,7 @@ function documentation($reflection)
 			$range =  ['start' => ['line' => $reflection->getStartLine() - 1, 'character' => 0], 'end' => ['line' => $reflection->getStartLine(), 'character' => 0]];
 		}
 
+		$isfunction = $reflection instanceof ReflectionFunctionAbstract;
 		$doccomment = $reflection->getDocComment();
 		$contents = trim('***' .
 			($reflection->isStatic ? 'static ' : '') .
@@ -345,9 +346,9 @@ function documentation($reflection)
 				($v->allowsNull ? '?' : '') .
 				trim($v->getType() . ' $' . $v->getName()) .
 				($v->isDefaultValueAvailable() ? (' = ' . ($v->isDefaultValueConstant() ? $v->getDefaultValueConstantName() : json_encode($v->getDefaultValue()))) : ''),
-				$reflection->getParameters()
+				$isfunction ? $reflection->getParameters() : [],
 			)) .
-			') : ' . ($reflection->getReturnType() ?: '?') .
+			') : ' . ($isfunction ? ($reflection->getReturnType() ?: '?') : '') .
 			"***\n\n" .
 			preg_replace('!^[\s*/]*!m', '', $doccomment)
 		);
