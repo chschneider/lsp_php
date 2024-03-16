@@ -215,7 +215,7 @@ function symbols($document, $identifier = null, $offset = null)
 				}
 				break;
 
-			case ord('{'):
+			case ord('{'): case T_CURLY_OPEN: case T_DOLLAR_OPEN_CURLY_BRACES:
 				if (!$level++)
 					$funcbody = true;
 				break;
