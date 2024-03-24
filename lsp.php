@@ -133,7 +133,7 @@ while (!feof(STDIN))
 			'textDocument/completion' => [
 				'result' => str_contains($identifier, '::') && ($class = reflection(rtrim($identifier, ':')))
 				? array_values(array_filter(array_map(fn($v) => completion($identifier, "$class->name::$v->name", 2),	# 2=Method
-					$class->getMethods(ReflectionMethod::IS_STATIC)
+					method_exists($class, 'getMethods') ? $class->getMethods(ReflectionMethod::IS_STATIC) : []
 				)))
 				: (count($completions = array_values(array_filter(array_merge(
 					array_map(fn($v) => completion($identifier, $v['name']), symbols($document)),
