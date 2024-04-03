@@ -424,8 +424,11 @@ function check($documents, $uri, $checkcmds)
 					    preg_match('/^\S+:(?<line>\d+):\d+:?\s+(?<message>.*)/', $line, $checkmatches))
 					{
 						['line' => $checkline, 'message' => $checkmessage] = $checkmatches;
+						$identifier = preg_match('/"([^"]+)"|(\S+) used only once/', $checkmessage, $m) ? ($m[1] ?: $m[2]) : '';
+						$lines = explode("\n", $documents[$uri]);
+						$startcol = $identifier ? strpos($lines[$checkline - 1], $identifier) : 0;
 						$diagnostics[] = [
-							'range'   => ['start' => ['line' => $checkline - 1, 'character' => 0], 'end' => ['line' => $checkline - 1, 'character' => 0]],
+							'range'   => ['start' => ['line' => $checkline - 1, 'character' => $startcol], 'end' => ['line' => $checkline - 1, 'character' => $startcol + strlen($identifier)]],
 							'severity' => preg_match('/error/', $checkmessage) ? 1 : 2,	# 1=Error, 2=Warning
 							'message' => $checkmessage,
 						];
