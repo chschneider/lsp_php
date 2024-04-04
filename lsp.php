@@ -72,6 +72,8 @@ while (!feof(STDIN))
 		$uri = isset($req->params->textDocument->uri) ? ($req->params->textDocument->uri)                     : null;
 		$identifier = isset($req->params->position)   ? identifier($document, $req->params->position)         : null;
 		$offset = isset($req->params->position)       ? offset($document, $req->params->position)             : null;
+		$documentclass= isset($document) && preg_match('/^\s*class\s+(\w+)/m', $document, $m) ? $m[1]          : '';
+		$fqidentifier = !$documentclass || !$identifier || preg_match('/::/', $identifier) ? $identifier : "$documentclass::$identifier";
 
 		@['result' => $result, 'error' => $error] = match($req->method) {
 			'initialize' => [
@@ -126,7 +128,7 @@ while (!feof(STDIN))
 							'end'   => ['line' => $m[2] - 1, 'character' => $m[3] - 1],
 						],
 					] : null,
-					explode("\n", shell_exec('git grep --line-number --column ' . escapeshellarg(preg_replace('/^(\w+::|)/', '::', "$identifier(")) . ' | tee /tmp/out')),
+					explode("\n", shell_exec('(git grep --line-number --column --perl-regexp ' . escapeshellarg("\b$fqidentifier\\(") . '; git grep --line-number --column --perl-regexp ' . escapeshellarg(preg_replace("/^(\w+)::/", "\b($1|self|static)::", "$fqidentifier\\(")) . ' | grep --perl-regexp ' . escapeshellarg(preg_replace('/::.*/', '\b', "\b$fqidentifier\b")) . ') | sort -u')),
 				)),
 			],
 
