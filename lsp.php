@@ -418,16 +418,21 @@ function check($documents, $uri, $checkcmds)
 				fclose($pipes[1]);
 				fclose($pipes[2]);
 
-				foreach (explode("\n", $checkoutput) as $line)
+				$lines = json_validate($checkoutput) ? json_decode($checkoutput, true)['comments'] : explode("\r", $checkoutput);
+
+				foreach ($lines as $line)
 				{
 					# PHP Parse error:  syntax error, unexpected token "%", expecting end of file in Standard input code on line 3
 					# t.php:28 $d used only once: $d = 42;
-					if (preg_match('/^[^:]+:\s+(?<message>.*) in Standard input code on line (?<line>\d+)/', $line, $checkmatches) ||
+					if (($checkmatches = is_array($line) ? $line : false) ||
+					    preg_match('/^[^:]+:\s+(?<message>.*) in Standard input code on line (?<line>\d+)/', $line, $checkmatches) ||
 					    preg_match('/^\S+:(?<line>\d+):\d+:?\s+(?<message>.*)/', $line, $checkmatches))
 					{
 						['line' => $checkline, 'message' => $checkmessage] = $checkmatches;
-						$identifier = preg_match('/"([^"]+)"|([$\w]+)[()]* (?:used only once|is deprecated)/', $checkmessage, $m) ? ($m[1] ?: $m[2]) : '';
 						$lines = explode("\n", $documents[$uri]);
+						$identifier = is_array($line)	# JSON format?
+							? substr($lines[$checkline - 1], $line['column'] - 1, $line['endColumn'] - $line['column'])
+							: (preg_match('/"([^"]+)"|([$\w]+)[()]* (?:used only once|is deprecated)/', $checkmessage, $m) ? ($m[1] ?: $m[2]) : '');
 						$startcol = $identifier ? strpos($lines[$checkline - 1], $identifier) : 0;
 						$diagnostics[] = [
 							'range'   => ['start' => ['line' => $checkline - 1, 'character' => $startcol], 'end' => ['line' => $checkline - 1, 'character' => $startcol + strlen($identifier)]],
