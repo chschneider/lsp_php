@@ -72,7 +72,7 @@ while (!feof(STDIN))
 		$uri = isset($req->params->textDocument->uri) ? ($req->params->textDocument->uri)                     : null;
 		$identifier = isset($req->params->position)   ? identifier($document, $req->params->position)         : null;
 		$offset = isset($req->params->position)       ? offset($document, $req->params->position)             : null;
-		$documentclass= isset($document) && preg_match('/^\s*class\s+(\w+)/m', $document, $m) ? $m[1]          : '';
+		$documentclass= isset($document) && preg_match('/^\s*class\s+(\w+)/m', $document, $m) ? preg_replace('/_tools$/', '(_tools)?', $m[1]) : '';
 		$fqidentifier = !$documentclass || !$identifier || preg_match('/::/', $identifier) ? $identifier : "$documentclass::$identifier";
 
 		@['result' => $result, 'error' => $error] = match($req->method) {
