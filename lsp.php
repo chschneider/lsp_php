@@ -128,7 +128,7 @@ while (!feof(STDIN))
 							'end'   => ['line' => $m[2] - 1, 'character' => $m[3] - 1],
 						],
 					] : null,
-					explode("\n", shell_exec('(git grep --line-number --column --perl-regexp ' . escapeshellarg("\b$fqidentifier\\(") . '; git grep --line-number --column --perl-regexp ' . escapeshellarg(preg_replace("/^(\w+)::/", "\b($1|self|static)::", "$fqidentifier\\(")) . ' | grep --perl-regexp ' . escapeshellarg(preg_replace('/::.*/', '\b', "\b$fqidentifier\b")) . ') | sort -u')),
+					explode("\n", shell_exec('(git grep --line-number --column --perl-regexp ' . escapeshellarg("\b$fqidentifier\\(") . '; git grep --line-number --column --perl-regexp ' . escapeshellarg(preg_replace("/^(" . preg_quote($documentclass, '/') . ")::/", "\b($1|self|static)::", "$fqidentifier\\(")) . ' | grep --perl-regexp ' . escapeshellarg(preg_replace('/::.*/', '\b', "\b$fqidentifier\b")) . ') | sort -u')),
 				)),
 			],
 
