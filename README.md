@@ -41,3 +41,26 @@ Currently is supports the following language features:
 | textDocument/publishDiagnostics | Run syntax check/lint on text changes and display errors/warnings     | `Space + d`         |
 | textDocument/hover              | Show function definition, i.e. parameters, return type and doccomment | `Space + k`         |
 | textDocument/documentSymbol     | List of functions/methods defined in current document                 | `Space + s`         |
+
+## How to use it to check other languages
+```toml
+[language-server.javascript]
+  command = "lsp.php"
+  args = ['--log', '--check-cmds=jshint --reporter=unix -', '--check-only']
+
+[[language]]
+  name = "javascript"
+  scope = "source.js"
+  file-types = ["js", "mjs"]
+  language-servers = ["javascript"]
+
+[language-server.bash]
+  command = "lsp.php"
+  args = ['--log', '--check-cmds=shellcheck -f json1 -x -', '--check-only']
+
+[[language]]
+  name = "bash"
+  scope = "source.sh"
+  file-types = ["sh"]
+  language-servers = ["bash"]
+```
