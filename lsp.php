@@ -2,7 +2,7 @@
 <?php
 
 $opts = getopt("a::c::Cfhi:l::", ['autoload::', 'check-cmds::', 'check-only', 'full-sync', 'help', 'include-path:', 'log::']);
-$default_checkcmds = 'php -nl,phplint.php -f';
+$default_checkcmds = 'php -nl,phplint.php -fs';
 $default_suffix    = '.php,.inc';
 $default_include   = 'phpinclude';
 $default_log       = '~/.cache/helix/lsp_php.log';
