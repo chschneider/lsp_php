@@ -418,7 +418,7 @@ function check($documents, $uri, $checkcmds)
 				fclose($pipes[1]);
 				fclose($pipes[2]);
 
-				$lines = json_validate($checkoutput) ? json_decode($checkoutput, true)['comments'] : explode("\r", $checkoutput);
+				$lines = @json_decode($checkoutput, true)['comments'] ?: explode("\n", $checkoutput);
 
 				foreach ($lines as $line)
 				{
