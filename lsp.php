@@ -490,8 +490,15 @@ function blockify($document, $uri, $range)
 	$end   = offset($document, ['line' => $range->end->line + ($range->end->character ? 1 : 0), 'character' => 0]) - 1;
 
 	$block = substr($document, $start, $end - $start);
-	preg_match('/^\s*/', $block, $match);
+	preg_match('/^\h*/', $block, $match);
 	$indent = $match[0];
+
+	$prevlinestart = offset($document, ['line' => max($range->start->line - 1, 0), 'character' => 0]);
+	$prevline = substr($document, $prevlinestart, $start - $prevlinestart);
+	preg_match('/^(\h*)({?)/', $prevline, $match);
+	[, $previndent, $prevbrace] = $match;
+
+	[$braceindent, $blockindent] = (!$previndent || $prevbrace || $previndent == $indent) ? [$indent, "\t$indent"] : [$previndent, $indent];
 
 	return [
 		'title' => 'blockify',
@@ -503,7 +510,7 @@ function blockify($document, $uri, $range)
 						'start' => position($document, $start),
 						'end'   => position($document, $end),
 					],
-					'newText' => "$indent{\n\t" . preg_replace('/\n/m', "\n\t", $block) . "\n$indent}",
+					'newText' => "$braceindent{\n" . preg_replace('/^\s*/m', $blockindent, $block) . "\n$braceindent}",
 				]],
 			]],
 		]
