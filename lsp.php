@@ -89,6 +89,7 @@ while (!feof(STDIN))
 						'completionProvider'            => $allfeatures ? ['resolveProvider' => false, 'triggerCharacters' => ['::']] : null,
 						'documentHighlightProvider'     => $allfeatures,
 						'codeActionProvider'            => $allfeatures,
+						'colorProvider'			=> true,
 					],
 				],
 			],
@@ -151,6 +152,10 @@ while (!feof(STDIN))
 				'result' => [
 					blockify($document, $uri, $req->params->range),
 				],
+			],
+
+			'textDocument/documentColor' => [
+				'result' => colors($document),
 			],
 
 			'shutdown', 'exit' => [],
@@ -481,6 +486,40 @@ function completion($identifier, $name, $kind = 3)
 		'insertText' => $func . '(${1})',
 		'documentation' => documentation(reflection($name))['contents'],
 	]) : [];
+}
+
+function colors($document)
+{
+	if (preg_match_all('/(?:#([0-9a-f]{8}|[0-9a-f]{6}|[0-9a-f]{3})|rgba?\s*\(([.\d%,\s]+))\b/', $document, $matches, PREG_OFFSET_CAPTURE | PREG_UNMATCHED_AS_NULL))
+	{
+		return array_map(function($v) use($document) {
+			[$text, $offset, $c] = $v;
+			$start = position($document, $offset);
+			$end   = position($document, $offset + strlen($text));
+			$rgba = match(strlen($c)) {	# Including '#'
+				3 => "$c[0]$c[0]$c[1]$c[1]$c[2]$c[2]ff",
+				6 => "{$c}ff",
+				8 => $c,
+				default => implode('', array_map(function($v) {
+						if (preg_match('/^\d+$/', $v))
+							return sprintf("%02x", $v);
+						else if (preg_match('/^\d+%$/', $v))
+							return sprintf("%02x", 255 * floatval($v) / 100);
+						else if (preg_match('/\.\d+$/', $v))
+							return sprintf("%02x", 255 * floatval($v));
+					},
+					preg_split('/[,\s]+/', $c)
+				)),
+			};
+			[$red, $green, $blue, $alpha] = array_map(fn($v) => hexdec($v) / 255, str_split($rgba, 2));
+			return [
+				'range' => ['start' => ['line' => $start[0], 'character' => $start[1]], 'end' => ['line' => $end[0], 'character' => $end[1]]],
+				'color' => ['red' => $red, 'green' => $green, 'blue' => $blue, 'alpha' => $alpha]
+			];
+		}, array_map(fn($k) => [...$matches[0][$k], $matches[1][$k][0] ?? $matches[2][$k][0]], array_keys($matches[0])));
+	}
+
+	return [];
 }
 
 # Code actions

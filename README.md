@@ -41,6 +41,7 @@ Currently is supports the following language features:
 | textDocument/publishDiagnostics | Run syntax check/lint on text changes and display errors/warnings     | `Space + d`         |
 | textDocument/hover              | Show function definition, i.e. parameters, return type and doccomment | `Space + k`         |
 | textDocument/documentSymbol     | List of functions/methods defined in current document                 | `Space + s`         |
+| textDocument/documentColor      | Show inline preview of colors (#rrggbb, rgba(), etc.)                 |                     |
 
 ## How to use it to check other languages
 ```toml
