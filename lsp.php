@@ -500,7 +500,7 @@ function colors($document)
 				3 => "$c[0]$c[0]$c[1]$c[1]$c[2]$c[2]ff",
 				6 => "{$c}ff",
 				8 => $c,
-				default => implode('', array_map(function($v) {
+				default => implode('', array_slice(array_pad(array_map(function($v) {
 						if (preg_match('/^\d+$/', $v))
 							return sprintf("%02x", $v);
 						else if (preg_match('/^\d+%$/', $v))
@@ -509,7 +509,7 @@ function colors($document)
 							return sprintf("%02x", 255 * floatval($v));
 					},
 					preg_split('/[,\s]+/', $c)
-				)),
+				), 4, 'ff'), 0, 4)),
 			};
 			[$red, $green, $blue, $alpha] = array_map(fn($v) => hexdec($v) / 255, str_split($rgba, 2));
 			return [
