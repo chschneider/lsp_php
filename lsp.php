@@ -490,7 +490,7 @@ function completion($identifier, $name, $kind = 3)
 
 function colors($document)
 {
-	if (preg_match_all('/(?:#([0-9a-f]{8}|[0-9a-f]{6}|[0-9a-f]{3})|rgba?\s*\(([.\d%,\s]+))\b/', $document, $matches, PREG_OFFSET_CAPTURE | PREG_UNMATCHED_AS_NULL))
+	if (preg_match_all('/(?:#([0-9a-f]{8}|[0-9a-f]{6}|[0-9a-f]{3})|rgba?\s*\(([.\d%,\s]+))\b/i', $document, $matches, PREG_OFFSET_CAPTURE | PREG_UNMATCHED_AS_NULL))
 	{
 		return array_map(function($v) use($document) {
 			[$text, $offset, $c] = $v;
