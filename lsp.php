@@ -496,7 +496,7 @@ function colors($document)
 			[$text, $offset, $c] = $v;
 			$start = position($document, $offset);
 			$end   = position($document, $offset + strlen($text));
-			$rgba = match(strlen($c)) {	# Including '#'
+			$rgba = match(strlen($c)) {
 				3 => "$c[0]$c[0]$c[1]$c[1]$c[2]$c[2]ff",
 				6 => "{$c}ff",
 				8 => $c,
