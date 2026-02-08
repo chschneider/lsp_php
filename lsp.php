@@ -438,7 +438,9 @@ function check($documents, $uri, $checkcmds)
 						$identifier = is_array($line)	# JSON format?
 							? substr($lines[$checkline - 1], $line['column'] - 1, $line['endColumn'] - $line['column'])
 							: (preg_match('/"([^"]+)"|([$\w]+)[()]* (?:parameter not used|used only once|is deprecated)/', $checkmessage, $m) ? ($m[1] ?: $m[2]) : '');
-						$startcol = $identifier ? strpos($lines[$checkline - 1], $identifier) : 0;
+						$startcol = $identifier
+							? (preg_match('/' . preg_quote($identifier) . '\b/', $lines[$checkline - 1], $matches, PREG_OFFSET_CAPTURE) ? $matches[0][1] : 0 )
+							: 0;
 						$diagnostics[] = [
 							'range'   => ['start' => ['line' => $checkline - 1, 'character' => $startcol], 'end' => ['line' => $checkline - 1, 'character' => $startcol + strlen($identifier)]],
 							'severity' => preg_match('/error/', $checkmessage) ? 1 : 2,	# 1=Error, 2=Warning
