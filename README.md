@@ -29,6 +29,9 @@ Options:
   -l=FILE,   --log=FILE           Enable logging to FILE, [~/.cache/helix/lsp_php.log]
 ```
 
+## Requirements
+PHP 8.x or newer with `pcntl` (to fork syntax checks in the background) and `intl` (to determine unicode codepoint borders) functions available.
+
 ## Features
 Currently is supports the following language features:
 | Command                         | Description                                                           | helix keymap        |
