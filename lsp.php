@@ -439,7 +439,7 @@ function check($documents, $uri, $checkcmds)
 							? substr($lines[$checkline - 1], $line['column'] - 1, $line['endColumn'] - $line['column'])
 							: (preg_match('/"([^"]+)"|([$\w]+)[()]* (?:parameter not used|used only once|is deprecated)/', $checkmessage, $m) ? ($m[1] ?: $m[2]) : '');
 						$startcol = $identifier
-							? (preg_match('/' . preg_quote($identifier) . '\b/', $lines[$checkline - 1], $matches, PREG_OFFSET_CAPTURE) ? $matches[0][1] : 0 )
+							? (preg_match('/' . preg_quote($identifier, '/') . '\b/', $lines[$checkline - 1], $matches, PREG_OFFSET_CAPTURE) ? $matches[0][1] : 0 )
 							: 0;
 						$diagnostics[] = [
 							'range'   => ['start' => ['line' => $checkline - 1, 'character' => $startcol], 'end' => ['line' => $checkline - 1, 'character' => $startcol + strlen($identifier)]],
