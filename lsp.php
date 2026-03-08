@@ -204,7 +204,7 @@ function symbols($document, $identifier = null, $offset = null)
 
 	foreach (PhpToken::tokenize((string)$document) as $token)
 	{
-		[$line, $col] = position($document, $token->pos);
+		['line' => $line, 'character' => $col] = position($document, $token->pos);
 
 		if ($token->isIgnorable())
 			continue;
@@ -311,7 +311,7 @@ function position($document, $offset)
 {
 	$lines = explode("\n", substr($document, 0, $offset));
 	$line = count($lines) - 1;
-	return [$line, strlen($lines[$line])];
+	return ['line' => $line, 'character' => strlen($lines[$line])];
 }
 
 function symbol($document, $uri, $identifier)
@@ -515,7 +515,7 @@ function colors($document)
 			};
 			[$red, $green, $blue, $alpha] = array_map(fn($v) => hexdec($v) / 255, str_split($rgba, 2));
 			return [
-				'range' => ['start' => ['line' => $start[0], 'character' => $start[1]], 'end' => ['line' => $end[0], 'character' => $end[1]]],
+				'range' => ['start' => $start, 'end' => $end],
 				'color' => ['red' => $red, 'green' => $green, 'blue' => $blue, 'alpha' => $alpha]
 			];
 		}, array_map(fn($k) => [...$matches[0][$k], $matches[1][$k][0] ?? $matches[2][$k][0]], array_keys($matches[0])));
