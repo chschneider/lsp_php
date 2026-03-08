@@ -321,13 +321,16 @@ function symbol($document, $uri, $identifier)
 
 	if (!($symbol = documentation($reflection))['contents'])
 	{
-		$range =  array_values(array_filter(symbols($document), fn($v) => $name === $v['name']))[0]['range'];
-		$contents = explode("\n", $document)[$range['start']['line']];  # Whole line of function definition
-		$symbol = [
-			'uri' => $uri,
-			'range' => $range,
-			'contents' => $contents,
-		];
+		if ($symbol = array_values(array_filter(symbols($document), fn($v) => $name === $v['name'])) ?: null)
+		{
+			$range =  $symbol[0]['range'];
+			$contents = explode("\n", $document)[$range['start']['line']];  # Whole line of function definition
+			$symbol = [
+				'uri' => $uri,
+				'range' => $range,
+				'contents' => $contents,
+			];
+		}
 	}
 
 	return $symbol;
