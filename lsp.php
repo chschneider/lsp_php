@@ -474,9 +474,9 @@ function check($documents, $uri, $checkcmds)
 
 function reflection($name)
 {
-	try { return ReflectionFunction($name); } catch (Exception) {}
-	try { return ReflectionMethod($name);   } catch (Exception) {}
-	try { return ReflectionClass($name);    } catch (Exception) {}
+	try { return new ReflectionFunction($name); } catch (Exception) {}
+	try { return new ReflectionMethod($name);   } catch (Exception) {}
+	try { return new ReflectionClass($name);    } catch (Exception) {}
 	return null;
 }
 
