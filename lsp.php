@@ -474,10 +474,10 @@ function check($documents, $uri, $checkcmds)
 
 function reflection($name)
 {
-	try { $reflection = new ReflectionFunction($name); } catch (Exception) {}
-	try { $reflection = new ReflectionMethod($name);   } catch (Exception) {}
-	try { $reflection = new ReflectionClass($name);    } catch (Exception) {}
-	return $reflection ?? null;
+	try { return ReflectionFunction($name); } catch (Exception) {}
+	try { return ReflectionMethod($name);   } catch (Exception) {}
+	try { return ReflectionClass($name);    } catch (Exception) {}
+	return null;
 }
 
 function completion($identifier, $name, $kind = 3)
