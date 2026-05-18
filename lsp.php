@@ -129,7 +129,7 @@ while (!feof(STDIN))
 							'end'   => ['line' => $m[2] - 1, 'character' => $m[3] - 1],
 						],
 					] : null,
-					explode("\n", shell_exec('(git grep --line-number --column --perl-regexp ' . escapeshellarg("\b$fqidentifier\\(") . '; git grep --line-number --column --perl-regexp ' . escapeshellarg(preg_replace("/^(" . preg_quote($documentclass, '/') . ")::/", "\b($1|self|static)::", "$fqidentifier\\(")) . ' | grep --perl-regexp ' . escapeshellarg(preg_replace('/::.*/', '\b', "\b$fqidentifier\b")) . ') | sort -u')),
+					explode("\n", (string)shell_exec('(git grep --line-number --column --perl-regexp ' . escapeshellarg("\b$fqidentifier\\(") . '; git grep --line-number --column --perl-regexp ' . escapeshellarg(preg_replace("/^(" . preg_quote($documentclass, '/') . ")::/", "\b($1|self|static)::", "$fqidentifier\\(")) . ' | grep --perl-regexp ' . escapeshellarg(preg_replace('/::.*/', '\b', "\b$fqidentifier\b")) . ') | sort -u')),
 				)),
 			],
 
@@ -280,7 +280,7 @@ function symbols($document, $identifier = null, $offset = null)
 		}
 	}
 
-	return $identifiers ?? $symbols;
+	return $identifiers ?? ($offset ? [] : $symbols);
 }
 
 function identifier($document, $position)
@@ -349,7 +349,7 @@ function documentation($reflection)
 		$isfunction = $reflection instanceof ReflectionFunctionAbstract;
 		$doccomment = $reflection->getDocComment();
 		$contents = trim('***' .
-			($reflection->isStatic ? 'static ' : '') .
+			($reflection->isStatic() ? 'static ' : '') .
 			# 'function ' .
 			"$reflection->name(" .
 			implode(', ', array_map(fn($v) =>
@@ -454,17 +454,16 @@ function check($documents, $uri, $checkcmds)
 				}
 
 				proc_close($check);
-
-				$response = json_encode([
-					'method' => 'textDocument/publishDiagnostics',
-					'params' => [
-						'uri' => $uri,
-						'diagnostics' => $diagnostics,
-					],
-				]);
-
 			}
 		}
+
+		$response = json_encode([
+			'method' => 'textDocument/publishDiagnostics',
+			'params' => [
+				'uri' => $uri,
+				'diagnostics' => $diagnostics,
+			],
+		]);
 
 		@fputs($sockets[0], "$response\n");
 		fclose($sockets[0]);
