@@ -42,6 +42,7 @@ Currently is supports the following language features:
 | textDocument/completion         | Show completion for PHP builtin functions or static method in classes | `ctrl-x` or `foo::` |
 | textDocument/codeAction         | Perform a code action on a selection, currently `blockify`            | `Space + a`         |
 | textDocument/publishDiagnostics | Run syntax check/lint on text changes and display errors/warnings     | `Space + d`         |
+| textDocument/documentHighlight  | Highlight all usages of a local variable in a function or method      | `Space + h`         |
 | textDocument/hover              | Show function definition, i.e. parameters, return type and doccomment | `Space + k`         |
 | textDocument/documentSymbol     | List of functions/methods defined in current document                 | `Space + s`         |
 | textDocument/documentColor      | Show inline preview of colors (#rrggbb, rgba(), etc.)                 |                     |
