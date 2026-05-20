@@ -349,7 +349,7 @@ function documentation($reflection)
 		$isfunction = $reflection instanceof ReflectionFunctionAbstract;
 		$doccomment = $reflection->getDocComment();
 		$contents = trim('***' .
-			($reflection->isStatic() ? 'static ' : '') .
+			(method_exists($reflection, 'isStatic') && $reflection->isStatic() ? 'static ' : '') .
 			# 'function ' .
 			"$reflection->name(" .
 			implode(', ', array_map(fn($v) =>
